@@ -1,0 +1,8 @@
+main: com.gmail.markushygedombrowski.HLMine
+version: "1.0"
+name: HLMine
+depend: [WorldGuard,WGRegionEvents,FastAsyncWorldEdit]
+commands:
+  createmine:
+    aliases: ["replacemine", "reloadmine", "setminepoint"]
+    description: "create mine"
