@@ -2,6 +2,7 @@ package com.gmail.markushygedombrowski.mines;
 
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
@@ -92,10 +93,11 @@ public class MineInfo {
     }
 
 
-    public boolean isBlockIn(ItemStack block) {
+    public boolean isBlockIn(Block block) {
+        ItemStack blockStack = new ItemStack(block.getType(), 1, block.getData());
         for (ItemStack st : mineBlocks) {
             if (st == null) return false;
-            if (st.getType() == block.getType() && st.getDurability() == block.getDurability()) {
+            if (st.getType() == blockStack.getType() && st.getDurability() == blockStack.getDurability()) {
                 return true;
             }
         }

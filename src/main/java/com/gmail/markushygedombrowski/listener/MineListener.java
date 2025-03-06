@@ -42,7 +42,7 @@ public class MineListener implements Listener {
         Map<String, MineInfo> mineinfo = mineManager.getMineMap();
         mineinfo.entrySet().stream().filter(entry -> checkBlockLoc(block, entry.getKey())).findFirst().ifPresent(entry ->
         {
-            if (!entry.getValue().isBlockIn(block.getState().getData().toItemStack())) {
+            if (!entry.getValue().isBlockIn(block)) {
                 event.setCancelled(true);
                 return;
             }

@@ -58,7 +58,7 @@ public class BlockReplace {
 
         new HashMap<>(blocklist).forEach((block, info) -> {
             if (HLMineUtils.isLocInRegion(block.getLocation(), mineInfo.getName())) {
-                if (!mineInfo.isBlockIn(block.getState().getData().toItemStack())) {
+                if (!mineInfo.isBlockIn(block)) {
                     ItemStack item = new ItemStack(info.getType(), 1, (short) info.getDura());
                     block.setType(item.getType());
                     block.setData(item.getData().getData());
@@ -83,7 +83,7 @@ public class BlockReplace {
             mineManager.getMineMap().entrySet().stream().filter(mine -> {
                 return HLMineUtils.isLocInRegion(block.getLocation(), mine.getKey());
             }).forEach(mine -> {
-                if (!mine.getValue().isBlockIn(block.getState().getData().toItemStack())) {
+                if (!mine.getValue().isBlockIn(block)) {
                     block.setType(block.getType());
 
                 }

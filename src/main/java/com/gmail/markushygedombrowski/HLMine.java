@@ -5,6 +5,7 @@ import com.gmail.markushygedombrowski.listener.MineListener;
 import com.gmail.markushygedombrowski.listener.RegionListener;
 import com.gmail.markushygedombrowski.mines.MineCommands;
 import com.gmail.markushygedombrowski.mines.MineManager;
+import com.gmail.markushygedombrowski.playerProfiles.PlayerProfiles;
 import com.gmail.markushygedombrowski.shards.Shards;
 import com.gmail.markushygedombrowski.utils.ConfigMineManager;
 import com.gmail.markushygedombrowski.utils.HLMineUtils;
@@ -22,14 +23,14 @@ public class HLMine extends JavaPlugin {
 
     @Override
     public void onEnable() {
-
+        PlayerProfiles playerProfiles = VagtProfiler.getInstance().getPlayerProfiles();
         saveDefaultConfig();
         loadConfigManager();
         HLMineUtils utils = new HLMineUtils(this);
         mineManager = new MineManager(configM);
         mineManager.load();
 
-        Shards shards = new Shards();
+        Shards shards = new Shards(playerProfiles);
         RegionListener regionListener = new RegionListener();
         getServer().getPluginManager().registerEvents(regionListener, this);
         blockReplace = new BlockReplace(mineManager, regionListener);

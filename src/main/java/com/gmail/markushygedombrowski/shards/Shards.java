@@ -1,5 +1,7 @@
 package com.gmail.markushygedombrowski.shards;
 
+import com.gmail.markushygedombrowski.playerProfiles.PlayerProfile;
+import com.gmail.markushygedombrowski.playerProfiles.PlayerProfiles;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -11,11 +13,17 @@ import java.util.HashMap;
 
 public class Shards {
     private HashMap<Block,Integer> cooldown = new HashMap<>();
+    private PlayerProfiles playerProfiles;
+
+    public Shards(PlayerProfiles playerProfiles) {
+        this.playerProfiles = playerProfiles;
+    }
 
     public void mineShards(Player p, Block block) {
         if(block.getType() == Material.EMERALD_ORE) {
             p.sendMessage("§aDu har fundet en shard!");
-            ItemStack shard = new ItemStack(Material.PRISMARINE_CRYSTALS);
+            PlayerProfile profile = playerProfiles.getPlayerProfile(p.getUniqueId());
+            ItemStack shard = new ItemStack(Material.PRISMARINE_CRYSTALS,profile.castPropertyToInt(profile.getProperty("shardsrate")));
             ItemMeta meta = shard.getItemMeta();
             meta.setDisplayName("§aShard");
             shard.setItemMeta(meta);
