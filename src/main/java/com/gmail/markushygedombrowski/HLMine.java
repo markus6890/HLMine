@@ -7,6 +7,7 @@ import com.gmail.markushygedombrowski.mines.MineCommands;
 import com.gmail.markushygedombrowski.mines.MineManager;
 import com.gmail.markushygedombrowski.playerProfiles.PlayerProfiles;
 import com.gmail.markushygedombrowski.shards.Shards;
+import com.gmail.markushygedombrowski.utils.BlockInfo;
 import com.gmail.markushygedombrowski.utils.ConfigMineManager;
 import com.gmail.markushygedombrowski.utils.HLMineUtils;
 
@@ -14,21 +15,20 @@ import com.gmail.markushygedombrowski.utils.HLMineUtils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class HLMine extends JavaPlugin {
-    private ConfigMineManager configM;
     private BlockReplace blockReplace;
     private MineManager mineManager;
+    private ConfigMineManager configM;
 
     @Override
     public void onEnable() {
         PlayerProfiles playerProfiles = VagtProfiler.getInstance().getPlayerProfiles();
-        saveDefaultConfig();
+        ConfigurationSerialization.registerClass(BlockInfo.class);
         loadConfigManager();
         HLMineUtils utils = new HLMineUtils(this);
-        mineManager = new MineManager(configM);
-        mineManager.load();
 
         Shards shards = new Shards(playerProfiles);
         RegionListener regionListener = new RegionListener();
@@ -66,13 +66,13 @@ public class HLMine extends JavaPlugin {
         configM.mineSetup();
         configM.saveMines();
         configM.reloadMines();
+        mineManager = new MineManager(configM);
+        mineManager.load();
     }
 
     public void reload() {
         reloadConfig();
-        FileConfiguration config = getConfig();
-        mineManager = new MineManager(configM);
+        configM.reloadMines();
         loadConfigManager();
-        mineManager.load();
     }
 }

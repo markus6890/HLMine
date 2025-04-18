@@ -4,5 +4,5 @@ name: HLMine
 depend: [WorldGuard,WGRegionEvents,FastAsyncWorldEdit,VagtProfiler]
 commands:
   createmine:
-    aliases: ["replacemine", "reloadmine", "setminepoint","resetmine"]
+    aliases: ["replacemine", "reloadmine", "setminepoint","resetmine","deletemine","addmineblock"]
     description: "create mine"

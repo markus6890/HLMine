@@ -3,6 +3,7 @@ package com.gmail.markushygedombrowski.cooldown;
 import com.gmail.markushygedombrowski.listener.RegionListener;
 import com.gmail.markushygedombrowski.mines.MineInfo;
 import com.gmail.markushygedombrowski.mines.MineManager;
+import com.gmail.markushygedombrowski.mines.MineType;
 import com.gmail.markushygedombrowski.utils.BlockInfo;
 import com.gmail.markushygedombrowski.utils.HLMineUtils;
 import org.bukkit.block.Block;
@@ -16,7 +17,6 @@ public class BlockReplace {
 
     private RegionListener regionListener;
     private HashMap<Block, BlockInfo> blocklist = new HashMap<>();
-
 
 
     public BlockReplace(MineManager mineManager, RegionListener regionListener) {
@@ -35,20 +35,28 @@ public class BlockReplace {
                 mineInfo.setTime(mineInfo.getTime() - 20);
                 return;
             }
+            if (mineInfo.getType() == MineType.MINE) {
+                teleportPlayers(mineInfo);
+            }
             replaceBlocks(mineInfo);
             mineInfo.setTime(mineInfo.getFixedTime());
-            String message = "§7§l[§2§lTræfarm§7§l] §2Træfarmen §7er blevet §aresat!";
+            String prefix = prefix(mineInfo.getType());
+            String plainprefix = plainprefix(mineInfo.getType());
+            String message = prefix + " §2" + plainprefix + " §7er blevet §aresat!";
             sendMessageToPlayers(mineInfo, message);
         });
     }
 
     private void sendResetTimeLeftMessage(MineInfo mineInfo) {
         String message;
+        String prefix = prefix(mineInfo.getType());
+        String plainprefix = plainprefix(mineInfo.getType());
+
         if (mineInfo.getSecondsLeft() == 60) {
-            message = "§7§l[§2§lTræfarm§7§l] §aDer er §c1 §aminut til at træfarmen resetter!";
+            message = prefix + " §aDer er §c1 §aminut til at " + plainprefix + " resetter!";
             sendMessageToPlayers(mineInfo, message);
         } else if (mineInfo.getSecondsLeft() <= 10) {
-            message = "§7§l[§2§lTræfarm§7§l] §aDer er §c" + mineInfo.getSecondsLeft() + " §asekunder til at træfarmen resetter!";
+            message = prefix + " §aDer er §c" + mineInfo.getSecondsLeft() + " §asekunder til " + plainprefix + " resetter!";
             sendMessageToPlayers(mineInfo, message);
         }
     }
@@ -59,7 +67,12 @@ public class BlockReplace {
         new HashMap<>(blocklist).forEach((block, info) -> {
             if (HLMineUtils.isLocInRegion(block.getLocation(), mineInfo.getName())) {
                 if (!mineInfo.isBlockIn(block)) {
-                    ItemStack item = new ItemStack(info.getType(), 1, (short) info.getDura());
+                    ItemStack item;
+                    if (mineInfo.getType() == MineType.MINE) {
+                        item = mineInfo.getBlocksSpawnChance().randomElement();
+                    } else {
+                        item = new ItemStack(info.getItemStack().getType(), 1, (short) info.getItemStack().getDurability());
+                    }
                     block.setType(item.getType());
                     block.setData(item.getData().getData());
 
@@ -76,6 +89,15 @@ public class BlockReplace {
         }).forEach(entry -> entry.getValue().sendMessage(message));
     }
 
+    public void teleportPlayers(MineInfo mineInfo) {
+        new HashMap<>(regionListener.getPlayers()).entrySet().stream()
+                .filter(entry -> entry.getKey().getId().equalsIgnoreCase(mineInfo.getName()))
+                .forEach(entry -> {
+                    if (entry.getValue() == null || mineInfo.getPasteLocation() == null) return;
+                    entry.getValue().teleport(mineInfo.getPasteLocation());
+                });
+    }
+
 
     public void resetBlocks() {
         if (blocklist.isEmpty()) return;
@@ -89,6 +111,23 @@ public class BlockReplace {
                 }
             });
         });
+    }
+
+    public String prefix(MineType type) {
+        String prefix = "§7§l[§2§lTræfarm§7§l]";
+        if (type == MineType.MINE) {
+            prefix = "§7§l[§9§lMine§7§l]";
+
+        }
+        return prefix;
+    }
+
+    public String plainprefix(MineType type) {
+        String plainprefix = "Træfarmen";
+        if (type == MineType.MINE) {
+            plainprefix = "Minen";
+        }
+        return plainprefix;
     }
 
 

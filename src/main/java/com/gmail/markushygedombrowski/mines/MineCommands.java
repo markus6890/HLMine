@@ -1,7 +1,9 @@
 package com.gmail.markushygedombrowski.mines;
 import com.gmail.markushygedombrowski.HLMine;
 import com.gmail.markushygedombrowski.cooldown.BlockReplace;
+import com.gmail.markushygedombrowski.utils.BlockInfo;
 import com.gmail.markushygedombrowski.utils.HLMineUtils;
+import com.gmail.markushygedombrowski.utils.RandomChanceCollection;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,15 +15,15 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MineCommands implements CommandExecutor {
-    private MineManager mineManager;
-    private HLMine plugin;
-    private BlockReplace blockReplace;
+    private final MineManager mineManager;
+    private final HLMine plugin;
+    private final BlockReplace blockReplace;
+
     public MineCommands(MineManager mineManager, HLMine plugin, BlockReplace blockReplace) {
         this.mineManager = mineManager;
         this.plugin = plugin;
         this.blockReplace = blockReplace;
     }
-
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String alias, String[] args) {
@@ -29,113 +31,200 @@ public class MineCommands implements CommandExecutor {
             System.out.println("§cKan kun bruges InGame!");
             return true;
         }
-        Player p = (Player) sender;
-        if (!p.hasPermission("createMine")) {
-            p.sendMessage("§cDet har du ikke permission til!");
+
+        Player player = (Player) sender;
+
+        if (!player.hasPermission("createMine")) {
+            player.sendMessage("§cDet har du ikke permission til!");
             return true;
         }
-        if(alias.equalsIgnoreCase("reloadmine")) {
-            plugin.reload();
-            p.sendMessage("§aMine reloaded!");
-            return true;
-        } else if(alias.equalsIgnoreCase("setminepoint")) {
-            String mine = args[0];
-            MineInfo mineInfo = mineManager.getMineInfo(mine);
-            if(mineInfo == null) {
-                p.sendMessage("§cDen mine findes ikke!");
-                return true;
-            }
-            mineInfo.setPasteLocation(p.getLocation());
-            p.sendMessage("§aMine point added!");
-            return true;
-        } else if(alias.equalsIgnoreCase("resetmine")) {
-            if (resetMine(args, p)) return true;
-            return true;
+
+        switch (alias.toLowerCase()) {
+            case "deletemine":
+                handleDeleteMine(player, args);
+                break;
+            case "addmineblock":
+                handleAddMineBlock(player, args);
+                break;
+            case "reloadmine":
+                plugin.reload();
+                player.sendMessage("§aMine reloaded!");
+                break;
+            case "setminepoint":
+                handleSetMinePoint(player, args);
+                break;
+            case "resetmine":
+                handleResetMine(player, args);
+                break;
+            case "replacemine":
+                handleReplaceMine(player, args);
+                break;
+            case "createmine":
+                handleCreateMine(player, args);
+                break;
+            default:
+                sendCommandList(player);
+                break;
         }
-        if (args.length != 3) {
-            commandList(p);
-
-            return true;
-        }
-        String mine = args[0];
-        MineType type = MineType.getMineType(args[1]);
-        int resetTime = Integer.parseInt(args[2]);
-        resetTime = resetTime * 60 * 20;
-
-        List<ItemStack> blockList = getBlocksFromPlayerInventory(p);
-
-
-        if(alias.equalsIgnoreCase("replacemine")) {
-            replaceMine(p,mine,type,resetTime,blockList);
-            return true;
-        }
-         createMine(p, mine, type, resetTime, blockList);
-
-
         return true;
     }
 
-    private void commandList(Player p) {
-        p.sendMessage("/createmine <regionname> <MineType> <resettime>");
-        p.sendMessage("/replacemine <regionname> <MineType> <resettime>");
-        p.sendMessage("/setminepoint <regionname>");
-        p.sendMessage("/resetmine <regionname>");
-        p.sendMessage("/reloadmine");
-        p.sendMessage("MineType: TREE/MINE");
+    private void handleDeleteMine(Player player, String[] args) {
+        if (!validateArgsLength(player, args, 1, "/deletemine <regionname>")) return;
+
+        String mineName = args[0];
+        MineInfo mineInfo = getMineInfo(player, mineName);
+        if (mineInfo == null) return;
+
+        mineManager.getMineMap().remove(mineName);
+        player.sendMessage("§aMine deleted!");
     }
 
-    private boolean resetMine(String[] args, Player p) {
-        String mine = args[0];
-        MineInfo mineInfo = mineManager.getMineInfo(mine);
-        if(mineInfo == null) {
-            p.sendMessage("§cDen mine findes ikke!");
-            return true;
-        }
-        blockReplace.replaceBlocks(mineInfo);
-        p.sendMessage("§aMine reset!");
-        return false;
-    }
+    private void handleAddMineBlock(Player player, String[] args) {
+        if (!validateArgsLength(player, args, 1, "/addmineblock <regionname>")) return;
 
-    private void createMine(Player p, String mine, MineType type, int resetTime, List<ItemStack> blockList) {
-        ProtectedRegion region = HLMineUtils.getRegion(mine, p.getWorld());
-        if(region == null) {
-            p.sendMessage("§cDen region findes ikke!");
+        List<ItemStack> blockList = getBlocksFromPlayerInventory(player);
+        if (blockList.isEmpty()) {
+            player.sendMessage("§cDu skal have de blokke du vil tilføje i dit inventory!");
             return;
         }
-        MineInfo mineInfo = new MineInfo(mine, blockList, type, resetTime, resetTime, p.getLocation(), region);
+
+        String mineName = args[0];
+        MineInfo mineInfo = getMineInfo(player, mineName);
+        if (mineInfo == null) return;
+
+        blockList.forEach(itemStack -> mineInfo.addBlockInfo(new BlockInfo(itemStack, 10)));
         mineManager.save(mineInfo);
-        p.sendMessage("§aMine saved!");
-        p.sendMessage("§aMine: " + mine);
-        p.sendMessage("§aType: " + type);
-        p.sendMessage("§aResetTime: " + resetTime);
-        p.sendMessage("§aBlocks: " + blockList.toString());
-
+        player.sendMessage("§aBlocks added to mine!");
     }
 
-    private void replaceMine(Player p, String mine, MineType type, int resetTime, List<ItemStack> blockList) {
-        MineInfo mineInfo = mineManager.getMineInfo(mine);
-        if(mineInfo == null) {
-            p.sendMessage("§cDen mine findes ikke!");
+    private void handleSetMinePoint(Player player, String[] args) {
+        if (!validateArgsLength(player, args, 1, "/setminepoint <regionname>")) return;
+
+        String mineName = args[0];
+        MineInfo mineInfo = getMineInfo(player, mineName);
+        if (mineInfo == null) return;
+
+        mineInfo.setPasteLocation(player.getLocation());
+        player.sendMessage("§aMine point added!");
+    }
+
+    private void handleResetMine(Player player, String[] args) {
+        if (!validateArgsLength(player, args, 1, "/resetmine <regionname>")) return;
+
+        String mineName = args[0];
+        MineInfo mineInfo = getMineInfo(player, mineName);
+        if (mineInfo == null) return;
+
+        blockReplace.replaceBlocks(mineInfo);
+        player.sendMessage("§aMine reset!");
+    }
+
+    private void handleReplaceMine(Player player, String[] args) {
+        if (!validateArgsLength(player, args, 3, "/replacemine <regionname> <MineType> <resettime>")) return;
+
+        String mineName = args[0];
+        MineType type = MineType.getMineType(args[1]);
+        int resetTime = parseResetTime(player, args[2]);
+        if (resetTime == -1) return;
+
+        List<BlockInfo> blockList = getBlockInfoListFromInventory(player);
+        if (blockList.isEmpty()) {
+            player.sendMessage("§cDu skal have de blokke du vil tilføje i dit inventory!");
             return;
         }
+
+        MineInfo mineInfo = getMineInfo(player, mineName);
+        if (mineInfo == null) return;
+
         mineInfo.setMineBlocks(blockList);
         mineInfo.setType(type);
         mineInfo.setFixedTime(resetTime);
         mineInfo.setTime(resetTime);
-        mineInfo.setPasteLocation(p.getLocation());
+        mineInfo.setPasteLocation(player.getLocation());
         mineManager.save(mineInfo);
-        p.sendMessage("§aMine Blocks replaced!");
-
+        player.sendMessage("§aMine Blocks replaced!");
     }
-    private List<ItemStack> getBlocksFromPlayerInventory(Player p) {
+
+    private void handleCreateMine(Player player, String[] args) {
+        if (!validateArgsLength(player, args, 3, "/createmine <regionname> <MineType> <resettime>")) return;
+
+        String mineName = args[0];
+        MineType type = MineType.getMineType(args[1]);
+        int resetTime = parseResetTime(player, args[2]);
+        if (resetTime == -1) return;
+
+        List<BlockInfo> blockList = getBlockInfoListFromInventory(player);
+        if (blockList.isEmpty()) {
+            player.sendMessage("§cDu skal have de blokke du vil tilføje i dit inventory!");
+            return;
+        }
+
+        if (mineManager.getMineInfo(mineName) != null) {
+            player.sendMessage("§cDen mine findes allerede!");
+            return;
+        }
+
+        ProtectedRegion region = HLMineUtils.getRegion(mineName, player.getWorld());
+        if (region == null) {
+            player.sendMessage("§cDen region findes ikke!");
+            return;
+        }
+
+        MineInfo mineInfo = new MineInfo(mineName, blockList, type, resetTime, resetTime, player.getLocation(), region);
+        mineManager.save(mineInfo);
+        player.sendMessage("§aMine created!");
+    }
+
+    private boolean validateArgsLength(Player player, String[] args, int expectedLength, String usage) {
+        if (args.length != expectedLength) {
+            player.sendMessage("§cBrug: " + usage);
+            return false;
+        }
+        return true;
+    }
+
+    private MineInfo getMineInfo(Player player, String mineName) {
+        MineInfo mineInfo = mineManager.getMineInfo(mineName);
+        if (mineInfo == null) {
+            player.sendMessage("§cDen mine findes ikke!");
+        }
+        return mineInfo;
+    }
+
+    private int parseResetTime(Player player, String resetTimeArg) {
+        try {
+            return Integer.parseInt(resetTimeArg) * 60 * 20;
+        } catch (NumberFormatException e) {
+            player.sendMessage("§cReset time skal være et tal!");
+            return -1;
+        }
+    }
+
+    private List<BlockInfo> getBlockInfoListFromInventory(Player player) {
+        List<BlockInfo> blockList = new ArrayList<>();
+        getBlocksFromPlayerInventory(player).forEach(itemStack -> blockList.add(new BlockInfo(itemStack, 10)));
+        return blockList;
+    }
+
+    private List<ItemStack> getBlocksFromPlayerInventory(Player player) {
         List<ItemStack> blockList = new ArrayList<>();
-        Arrays.stream(p.getInventory().getContents()).forEach(itemStack -> {
-            if (itemStack != null) {
-                if(itemStack.getType().isBlock()) {
-                    blockList.add(itemStack);
-                }
+        Arrays.stream(player.getInventory().getContents()).forEach(itemStack -> {
+            if (itemStack != null && itemStack.getType().isBlock()) {
+                blockList.add(itemStack);
             }
         });
         return blockList;
+    }
+
+    private void sendCommandList(Player player) {
+        player.sendMessage("/createmine <regionname> <MineType> <resettime>");
+        player.sendMessage("/deletemine <regionname>");
+        player.sendMessage("/replacemine <regionname> <MineType> <resettime>");
+        player.sendMessage("/setminepoint <regionname>");
+        player.sendMessage("/resetmine <regionname>");
+        player.sendMessage("/addmineblock <regionname>");
+        player.sendMessage("/reloadmine");
+        player.sendMessage("MineType: TREE/MINE");
     }
 }

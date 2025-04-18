@@ -1,5 +1,7 @@
 package com.gmail.markushygedombrowski.mines;
 
+import com.gmail.markushygedombrowski.utils.BlockInfo;
+import com.gmail.markushygedombrowski.utils.RandomChanceCollection;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -9,17 +11,18 @@ import java.util.List;
 
 public class MineInfo {
     private String name;
-    private List<ItemStack> mineBlocks;
+    private List<BlockInfo> mineBlocks;
     private MineType type;
     private int time;
     private int fixedTime;
     private Location pasteLocation;
+    private RandomChanceCollection<ItemStack> blocksSpawnChance;
 
 
     private ProtectedRegion region;
 
 
-    public MineInfo(String name, List<ItemStack> mineBlocks, MineType type, int time, int fixedTime, Location pasteLocation, ProtectedRegion region) {
+    public MineInfo(String name, List<BlockInfo> mineBlocks, MineType type, int time, int fixedTime, Location pasteLocation, ProtectedRegion region) {
         this.name = name;
         this.mineBlocks = mineBlocks;
         this.type = type;
@@ -27,6 +30,16 @@ public class MineInfo {
         this.fixedTime = fixedTime;
         this.pasteLocation = pasteLocation;
         this.region = region;
+        if(type == MineType.MINE) {
+            blocksSpawnChance = new RandomChanceCollection<>();
+            mineBlocks.forEach(blockInfo -> {
+                if(blockInfo.getChance() <= 0) {
+                    blockInfo.setChance(10);
+                }
+                blocksSpawnChance.add(blockInfo.getChance(), blockInfo.getItemStack());
+            });
+        }
+
     }
 
     public String getName() {
@@ -69,8 +82,25 @@ public class MineInfo {
         return time;
     }
 
-    public List<ItemStack> getMineBlocks() {
+    public List<BlockInfo> getMineBlocks() {
         return mineBlocks;
+    }
+    public BlockInfo getBlockInfo(Block block) {
+        for (BlockInfo blockInfo : mineBlocks) {
+            if (blockInfo.getItemStack().getType() == block.getType() && blockInfo.getItemStack().getDurability() == block.getState().getData().toItemStack().getDurability()) {
+                return blockInfo;
+            }
+        }
+        return null;
+    }
+    public void addBlockInfo(BlockInfo blockInfo) {
+        mineBlocks.add(blockInfo);
+        if(type == MineType.MINE) {
+            blocksSpawnChance.add(blockInfo.getChance(), blockInfo.getItemStack());
+        }
+    }
+    public RandomChanceCollection<ItemStack> getBlocksSpawnChance() {
+        return blocksSpawnChance;
     }
 
     public Location getPasteLocation() {
@@ -81,7 +111,7 @@ public class MineInfo {
         this.pasteLocation = pasteLocation;
     }
 
-    public void setMineBlocks(List<ItemStack> mineBlocks) {
+    public void setMineBlocks(List<BlockInfo> mineBlocks) {
         this.mineBlocks = mineBlocks;
     }
 
@@ -94,13 +124,14 @@ public class MineInfo {
 
 
     public boolean isBlockIn(Block block) {
-        ItemStack blockStack = new ItemStack(block.getType(), 1, block.getData());
-        for (ItemStack st : mineBlocks) {
-            if (st == null) return false;
-            if (st.getType() == blockStack.getType() && st.getDurability() == blockStack.getDurability()) {
-                return true;
+        boolean[] found = {false};
+        ItemStack blockStack = new ItemStack(block.getType(), 1, block.getState().getData().toItemStack().getDurability());
+        mineBlocks.forEach(blockInfo -> {
+            if (blockInfo.getItemStack().getType() == blockStack.getType() && blockInfo.getItemStack().getDurability() == blockStack.getDurability()){
+                found[0] = true;
+                return;
             }
-        }
-        return false;
+        });
+        return found[0];
     }
 }

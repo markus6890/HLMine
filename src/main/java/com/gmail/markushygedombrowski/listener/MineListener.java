@@ -40,14 +40,14 @@ public class MineListener implements Listener {
             return;
         }
         Map<String, MineInfo> mineinfo = mineManager.getMineMap();
-        mineinfo.entrySet().stream().filter(entry -> checkBlockLoc(block, entry.getKey())).findFirst().ifPresent(entry ->
+        mineinfo.entrySet().stream().filter(mineInfo -> checkBlockLoc(block, mineInfo.getKey())).findFirst().ifPresent(mineInfo ->
         {
-            if (!entry.getValue().isBlockIn(block)) {
+            if (!mineInfo.getValue().isBlockIn(block)) {
                 event.setCancelled(true);
                 return;
             }
-            BlockInfo blockInfo = new BlockInfo(block.getState().getData().toItemStack().getDurability(), block.getType());
-            blockReplace.addBlock(block, blockInfo);
+
+            blockReplace.addBlock(block,mineInfo.getValue().getBlockInfo(block));
         });
 
 
